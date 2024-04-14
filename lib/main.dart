@@ -4,29 +4,65 @@ import 'package:injectable/injectable.dart';
 import 'package:learn_flutter/shared/injections/injections.dart';
 import 'package:learn_flutter/shared/routes/index_route.dart';
 import 'package:learn_flutter/shared/widgets/header.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    // do something
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      int counter = prefs.getInt('counter') ?? 0;
+      print("hello from worker manager $task $inputData $counter");
+      await prefs.remove('counter');
+      print("prefs $counter");
+      print("prefs $counter");
+      print("prefs $counter");
+    } catch (e) {
+      print(e);
+    }
+    return Future.value(true);
+  });
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final preferences = await SharedPreferences.getInstance();
+  await preferences.setInt('counter', 123);
+  Workmanager().initialize(
+      callbackDispatcher, // The top level function, aka callbackDispatcher
+      isInDebugMode:
+          true // If enabled it will post a notification whenever the task is running. Handy for debugging tasks
+      );
+  Workmanager()
+      .registerOneOffTask('com.learn.telkom.workmanager.single', 'simple task');
+
+  // Workmanager().registerPeriodicTask(
+  //     'com.learn.telkom.workmanager.periodic',
+  //     'com.learn.telkom.workmanager.periodic',
+  //     frequency: const Duration(minutes: 1));
   //add this
   configureDependencies(Environment.dev);
   runApp(const MyApp());
 }
 
-// assuming this is the root widget of your App                 
-class AppRouterMain extends StatelessWidget {            
+// assuming this is the root widget of your App
+class AppRouterMain extends StatelessWidget {
   final AppRouter _appRouter = AppRouter();
 
   AppRouterMain({super.key});
 
-  // make sure you don't initiate your router                
-  // inside of the build function.                
-            
-  @override            
-  Widget build(BuildContext context){            
-    return MaterialApp.router(            
-      routerConfig: _appRouter.config(),         
-    );            
-  }            
-}            
+  // make sure you don't initiate your router
+  // inside of the build function.
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: _appRouter.config(),
+    );
+  }
+}
 
 class MyApp extends StatelessWidget {
   // final _appRouter = getIt<AppRouter>();
@@ -35,7 +71,6 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -56,9 +91,8 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-        
       ),
-      home: Scaffold(body: AppRouterMain()), 
+      home: Scaffold(body: AppRouterMain()),
     );
   }
 }
